@@ -25,7 +25,7 @@ y_array=np.array([float(i) for i in Y.split()])
 print(y_array)
 
 # Train the perceptron
-weights, bias = perceptron(x_array, y_array, lr=0.1, epochs=10)
+weights, bias = perceptron(x_array, y_array)
 print(weights)
 print(bias)
 
