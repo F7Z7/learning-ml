@@ -1,6 +1,6 @@
 import numpy as np
 import nnfs
-from nnfs.datasets import spiral_data
+from nnfs.datasets import spiral_data,vertical_data
 
 nnfs.init()
 
@@ -66,6 +66,7 @@ class Cross_EntropyLoss(Loss):
 
 # Create dataset
 X, y = spiral_data(samples=100, classes=3)
+# X, y = vertical_data(samples=100, classes=3)
 
 # First layer: 2 inputs, 3 outputs
 first_layer = NeuralNetwork(2, 3)
@@ -89,3 +90,53 @@ loss_function = Cross_EntropyLoss()
 loss = loss_function.calculate(activation2, y)
 
 print(f"Loss: {loss}")
+
+
+lowest_loss = np.inf  # Initialize the lowest loss to infinity
+
+# Acquiring best weights and biases
+best_layer1_weights = first_layer.weights.copy()
+best_layer2_weights = second_layer.weights.copy()
+best_layer1_bias = first_layer.bias.copy()
+best_layer2_bias = second_layer.bias.copy()
+
+# Updating weights and checking losses
+for iteration in range(10000):
+    # Randomly initialize weights and biases
+    first_layer.weights = 0.05 * np.random.rand(2, 3)
+    second_layer.weights = 0.05 * np.random.rand(3, 3)
+    first_layer.bias = 0.05 * np.random.rand(1, 3)
+    second_layer.bias = 0.05 * np.random.rand(1, 3)
+
+    # Forward pass through the first layer and ReLU activation
+    first_layer.forward(X)
+    activation1 = Activations.relu(first_layer.output)
+
+    # Forward pass through the second layer and softmax activation
+    second_layer.forward(activation1)
+    activation2 = Activations.softmax(second_layer.output)
+
+    # Calculate the loss
+    loss = loss_function.calculate(activation2, y)
+
+    # Accuracy calculation
+    predictions = np.argmax(activation2, axis=1)
+    accuracy = np.mean(predictions == y)
+
+    # Print accuracy for monitoring
+    # print(f"Iteration {iteration}: Loss={loss:.4f}, Accuracy={accuracy:.4f}")
+
+    # Update best weights and biases if the loss is the lowest
+    if loss < lowest_loss:
+        print(f"New set of weights found ,iterations ,{iteration}, loss ,{loss}, acc ,{accuracy}")
+        lowest_loss = loss
+        best_layer1_weights = first_layer.weights.copy()
+        best_layer2_weights = second_layer.weights.copy()
+        best_layer1_bias = first_layer.bias.copy()
+        best_layer2_bias = second_layer.bias.copy()
+
+    else:
+        first_layer.weights = best_layer1_weights.copy()
+        second_layer.weights = best_layer2_weights.copy()
+        first_layer.bias = best_layer1_bias.copy()
+        second_layer.bias = best_layer2_bias.copy()
