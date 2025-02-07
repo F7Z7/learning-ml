@@ -65,8 +65,8 @@ class Cross_EntropyLoss(Loss):
 
 
 # Create dataset
-X, y = spiral_data(samples=100, classes=3)
-# X, y = vertical_data(samples=100, classes=3)
+# X, y = spiral_data(samples=100, classes=3)
+X, y = vertical_data(samples=100, classes=3)
 
 # First layer: 2 inputs, 3 outputs
 first_layer = NeuralNetwork(2, 3)
@@ -103,10 +103,10 @@ best_layer2_bias = second_layer.bias.copy()
 # Updating weights and checking losses
 for iteration in range(10000):
     # Randomly initialize weights and biases
-    first_layer.weights = 0.05 * np.random.rand(2, 3)
-    second_layer.weights = 0.05 * np.random.rand(3, 3)
-    first_layer.bias = 0.05 * np.random.rand(1, 3)
-    second_layer.bias = 0.05 * np.random.rand(1, 3)
+    first_layer.weights += 0.05 * np.random.randn(2, 3)
+    second_layer.weights += 0.05 * np.random.randn(3, 3)
+    first_layer.bias += 0.05 * np.random.randn(1, 3)
+    second_layer.bias += 0.05 * np.random.randn(1, 3)
 
     # Forward pass through the first layer and ReLU activation
     first_layer.forward(X)
