@@ -1,6 +1,6 @@
 import numpy as np
 import nnfs
-from nnfs.datasets import spiral_data,vertical_data
+from nnfs.datasets import spiral_data, vertical_data
 
 nnfs.init()
 
@@ -12,7 +12,18 @@ class NeuralNetwork:
 
     # Forward propagation
     def forward(self, inputs):
+        self.inputs = inputs
         self.output = np.dot(inputs, self.weights) + self.bias
+
+    def backward(self, dvalues, lr):
+        3\
+        #findind derivatives
+        self.dweights = np.dot(self.inputs.T, dvalues)
+        self.dbias = np.sum(dvalues, axis=0, keepdims=True)
+
+#new weights adn biases are updated Wnew=Wold-lr*dl/dw
+        self.bias -=lr*self.dbias
+        self.weights -= lr * self.dweights
 
 
 # Activation functions
@@ -20,6 +31,11 @@ class Activations:
     @staticmethod
     def relu(inputs):
         return np.maximum(0, inputs)
+
+    def relu_derivative(dvalues, inputs):
+        dvalues_copy = dvalues.copy()  # Prevent in-place mutation
+        dvalues_copy[inputs <= 0] = 0  # Gradient is zero where input was negative
+        return dvalues_copy
 
     @staticmethod
     def softmax(inputs):
@@ -63,80 +79,45 @@ class Cross_EntropyLoss(Loss):
         negative_log_likelihoods = -np.log(correct_confidences)
         return negative_log_likelihoods
 
+    def backward(self, dvalues, targets):
+        samples = len(dvalues)
+        dvalues_copy = dvalues.copy()#not changing og values
+        dvalues[range(samples), targets] -= 1
+        return dvalues / samples
+
 
 # Create dataset
 # X, y = spiral_data(samples=100, classes=3)
 X, y = vertical_data(samples=100, classes=3)
 
 # First layer: 2 inputs, 3 outputs
+# Initialize layers
 first_layer = NeuralNetwork(2, 3)
-first_layer.forward(X)
-l1_output = first_layer.output
+second_layer = NeuralNetwork(3, 3)
+loss_function = Cross_EntropyLoss()
+learning_rate = 0.1
 
 # Apply ReLU activation
-activation1 = Activations.relu(l1_output)
-print(f"Relu activation outputs:\n{activation1[:5]}")
-
-# Second layer: 3 inputs, 3 outputs
-second_layer = NeuralNetwork(3, 3)
-second_layer.forward(activation1)
-
-# Apply Softmax activation
-activation2 = Activations.softmax(second_layer.output)
-print(f"Softmax activation outputs:\n{activation2[:5]}")
-
-# Calculate Cross-Entropy Loss
-loss_function = Cross_EntropyLoss()
-loss = loss_function.calculate(activation2, y)
-
-print(f"Loss: {loss}")
-
-
-lowest_loss = np.inf  # Initialize the lowest loss to infinity
-
-# Acquiring best weights and biases
-best_layer1_weights = first_layer.weights.copy()
-best_layer2_weights = second_layer.weights.copy()
-best_layer1_bias = first_layer.bias.copy()
-best_layer2_bias = second_layer.bias.copy()
-
-# Updating weights and checking losses
-for iteration in range(10000):
-    # Randomly initialize weights and biases
-    first_layer.weights += 0.05 * np.random.randn(2, 3)
-    second_layer.weights += 0.05 * np.random.randn(3, 3)
-    first_layer.bias += 0.05 * np.random.randn(1, 3)
-    second_layer.bias += 0.05 * np.random.randn(1, 3)
-
-    # Forward pass through the first layer and ReLU activation
+# Training loop
+for epoch in range(10000):
+    # Forward pass
     first_layer.forward(X)
     activation1 = Activations.relu(first_layer.output)
-
-    # Forward pass through the second layer and softmax activation
     second_layer.forward(activation1)
     activation2 = Activations.softmax(second_layer.output)
 
-    # Calculate the loss
+    # Loss calculation
     loss = loss_function.calculate(activation2, y)
+    predictions = np.argmax(activation2, axis=1)  # finding highes indexed number=>corresppodning class
+    accuracy = np.mean(predictions == y)  # chechk with origianl values adn returns a boolen array
 
-    # Accuracy calculation
-    predictions = np.argmax(activation2, axis=1)
-    accuracy = np.mean(predictions == y)
+    if epoch % 100 == 0:
+        print(f"Epoch {epoch}: Loss={loss:.4f}, Accuracy={accuracy:.4f}")
 
-    # Print accuracy for monitoring
-    # print(f"Iteration {iteration}: Loss={loss:.4f}, Accuracy={accuracy:.4f}")
+    # Backpropagation
+    dloss = loss_function.backward(activation2, y)
+    second_layer.backward(dloss, learning_rate)
+    dactivation1 = Activations.relu_derivative(np.dot(dloss, second_layer.weights.T), first_layer.output)
+    first_layer.backward(dactivation1, learning_rate)
 
-    # Update best weights and biases if the loss is the lowest
-    if loss < lowest_loss:
-        print(f"New set of weights found ,iterations ,{iteration}, loss ,{loss}, acc ,{accuracy}")
-        lowest_loss = loss
-        best_layer1_weights = first_layer.weights.copy()
-        best_layer2_weights = second_layer.weights.copy()
-        best_layer1_bias = first_layer.bias.copy()
-        best_layer2_bias = second_layer.bias.copy()
-
-    else:
-        first_layer.weights = best_layer1_weights.copy()
-        second_layer.weights = best_layer2_weights.copy()
-        first_layer.bias = best_layer1_bias.copy()
-        second_layer.bias = best_layer2_bias.copy()
+print("Training Complete!")
