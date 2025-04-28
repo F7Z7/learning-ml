@@ -1,6 +1,7 @@
 import numpy as np
 import nnfs
-from nnfs.datasets import spiral_data,vertical_data
+from nnfs.datasets import spiral_data, vertical_data
+from sklearn.datasets import make_moons, make_circles, make_classification
 import matplotlib.pyplot as plt
 
 nnfs.init()
@@ -31,8 +32,8 @@ class Activations:
         return np.maximum(0, inputs)
 
     @staticmethod
-    def relu_derivative(dvalues, inputs):
-        dvalues_copy = dvalues.copy()
+    def relu_derivative(der_values, inputs):
+        dvalues_copy = der_values.copy()
         dvalues_copy[inputs <= 0] = 0  # Zero gradient for negative inputs
         return dvalues_copy
 
@@ -58,7 +59,8 @@ class CrossEntropyLoss:
 
 
 # Create dataset
-X, y = vertical_data(samples=100, classes=3)
+# X, y =spiral_data(samples=100, classes=3)
+X, y = make_moons(n_samples=200, noise=0.1)
 
 # Visualizing Data Before Training
 plt.figure(figsize=(12, 5))
@@ -73,7 +75,7 @@ layer3 = NeuralNetwork(8, 3)  # Output layer (3 classes)
 
 loss_function = CrossEntropyLoss()
 learning_rate = 0.01
-
+previous_accuracy = 0
 # Training Loop
 for epoch in range(10000):
     # Forward Pass
@@ -93,6 +95,12 @@ for epoch in range(10000):
 
     if epoch % 500 == 0:
         print(f"Epoch {epoch}: Loss={loss:.4f}, Accuracy={accuracy:.4f}")
+        if accuracy < previous_accuracy:
+            print("Accuracy dropped! Stopping training.")
+            break
+
+            # Update previous accuracy
+        previous_accuracy = accuracy
 
     # Backpropagation
     d_loss = loss_function.backward(activation3, y)
